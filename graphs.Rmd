@@ -1,0 +1,384 @@
+---
+title: "Vizualizacija podataka za strategiju SEE 2020"
+author: "Nadija Borovina"
+output:
+  prettydoc::html_pretty:
+    theme: hpstr
+  pdf_document: 
+    df_print: kable
+  html_document:
+    df_print: paged
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message = FALSE)
+```
+
+```{r, echo = FALSE}
+library(readxl)
+library(plyr)
+library(reshape2)
+library(ggplot2)
+library(plotly)
+library(tidyverse)
+library(data.table)
+```
+
+```{r, echo = FALSE}
+fdi <- read_excel("podaci/fdi.xlsx")
+fdi_bih <- read_excel("podaci/fdi_bih.xlsx")
+its <- read_excel("podaci/its.xlsx")
+fats <- read_excel("podaci/fats_enterprises.xlsx")
+fats_vt <- read_excel("podaci/fats_value_added.xlsx")
+imp_bih <- read_excel("podaci/imp_services_bih.xlsx")
+exp_bih <- read_excel("podaci/exp_services_bih.xlsx")
+exp_of_goods <- read_excel("podaci/export_of_goods.xlsx")
+imp_of_goods <- read_excel("podaci/import_of_goods.xlsx")
+exp_imp <- read_excel("podaci/exp_imp_sectors.xlsx")
+fdi_outflows_rs <- read_excel("podaci/fdi_outflows_rs.xlsx")
+fdi_inflows_rs <- read_excel("podaci/fdi_inflows_rs.xlsx")
+```
+
+## Trgovina robom
+
+Trgovina robom (engl. Trade in goods) uključuje svu robu koja uvećava ili umanjuje zalihe materijalnih resursa zemlje ulaskom u njeno ekonomsko područje - uvoz (engl. Import) ili napuštanjem - izvoz (engl. Export). Roba je materijalno dobro i čine je proizvedeni predmeti nad kojima se mogu uspostaviti vlasnička prava i čije se vlasništvo može prenijeti s jedne institucionalne jedinice na drugu sudjelovanjem u transakcijama. Roba koja se prevozi kroz neku zemlju, te roba privremeno prihvaćena ili povučena (osim robe za unutrašnju ili vanjsku preradu) ne spada u ovu kategoriju. 
+
+### Izvoz robe – CEFTA 2019
+
+```{r, echo = FALSE}
+data.table::melt(exp_of_goods, id.vars='Partner') %>%
+plot_ly(x = ~Partner, y = ~value, type = 'bar', 
+                name = ~variable, color = ~variable) %>%
+      layout(autosize = F, title = 'Export of Goods – CEFTA 2019', yaxis = list(title = 'EUR'), xaxis = list(title = 'Countries'), barmode = 'stack')
+```
+
+Ukoliko pogledamo izvoz dobara zemalja CEFTA-e za 2019-u godinu možemo uočiti da postoji relacija između BiH i Srbije, tačnije dobar udio izvoza iz BiH ide u Srbiju i obratno. Ovo je logičan slijed događaja s obzirom na etničku strukturu stanovništva u ovim državama kao i jake historijske veze. Takođe, dobar udio izvoza iz Albanije i Sjeverne Makedonije ide ka Kosovu, što se takođe može pripisati prethodno navedenim uzrocima.
+
+### Izvoz po sektorima - 2019
+
+0 - Hrana i žive životinje, \
+1 - Pića i duhan, \
+2 - Sirovi materijali, nejestivi, osim goriva, \
+3 - Mineralna goriva, maziva i srodni materijali, \
+4 - Životinjska i biljna ulja, masti i voskovi, \
+5 - Hemikalije i srodni proizvodi, n.e.s., \
+6 - Prerađena roba, klasificirana uglavnom prema materijalima, \
+7 - Strojevi i transportna oprema, \
+8 - Razni proizvedeni proizvodi, \
+9 - Robe i transakcije koje nisu navedene u SITC-u Rev. 4 \
+
+```{r, echo = FALSE}
+exp_imp_tidy <- exp_imp %>% separate(Sector, c("Number", "Name"), sep = ' ', convert = TRUE, extra = "merge")
+exp_imp_tidy <- ddply(exp_imp_tidy, .(Number, Name), numcolwise(sum))
+fig <- plot_ly(exp_imp_tidy, labels = ~Number, values = ~Export/10^9, 
+                      textinfo = 'percent', 
+                      hoverinfo = 'text',
+                      text = ~paste('</br> Sector:', Name, '</br> Export:', round(Export/10^9, digits = 2), 'B'))
+fig <- fig %>% add_pie(hole = 0.6)
+fig <- fig %>% layout(autosize = F, title = 'Export by Sectors – 2019', 
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+```
+
+Kada posmatramo izvoz po sektorima, vidimo da preko 50% izvoza zemalja CEFTA-e čine: prerađena roba, strojevi i transportna oprema i ostali nesvrstani proizvedeni proizvodi.
+
+### Uvoz robe – CEFTA 2019
+
+```{r, echo = FALSE}
+data.table::melt(imp_of_goods, id.vars='Partner') %>%
+plot_ly(x = ~Partner, y = ~value, type = 'bar', 
+                name = ~variable, color = ~variable) %>%
+      layout(autosize = F, title = 'Import of Goods – CEFTA 2019', yaxis = list(title = 'EUR'), xaxis = list(title = 'Countries'), barmode = 'stack')
+```
+Pogledamo li uvoz dobara iz zemalja CEFTA-e, opet se može uočiti jaka veza između BiH i Srbije. Ovdje se takođe može uočiti i nekonzistentnost u podacima o uvozu i izvozu. Naime mnogo je razloga zašto se izvoz jedne države ne poklapa sa uvozom druge, a jedan od glavnih je različita procjena uvoza i izvoza. Uvoz se općenito procjenjuje na osnovu troškova, osiguranja i tereta, dok izvoz procjenjuje na bazi Free on Board-a (FOB). Iz tog razloga, uvozne vrijednosti imaju tendenciju da budu veće od vrijednosti izvoza.
+
+### Uvoz po sektorima - 2019
+
+0 - Hrana i žive životinje, \
+1 - Pića i duhan, \
+2 - Sirovi materijali, nejestivi, osim goriva, \
+3 - Mineralna goriva, maziva i srodni materijali, \
+4 - Životinjska i biljna ulja, masti i voskovi, \
+5 - Hemikalije i srodni proizvodi, n.e.s., \
+6 - Prerađena roba, klasificirana uglavnom prema materijalima, \
+7 - Strojevi i transportna oprema, \
+8 - Razni proizvedeni proizvodi, \
+9 - Robe i transakcije koje nisu navedene u SITC-u Rev. 4 \
+
+```{r, echo = FALSE}
+fig <- plot_ly(exp_imp_tidy, labels = ~Number, values = ~Import/10^9, 
+               textinfo = 'percent', 
+               hoverinfo = 'text',
+               text = ~paste('</br> Sector:', Name, '</br> Import:', round(Import/10^9, digits = 2), 'B'))
+fig <- fig %>% add_pie(hole = 0.6)
+fig <- fig %>% layout(autosize = F, title = 'Import by Sectors – 2019',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+```
+
+Ako promatramo uvoz dobara po sektorima očekivali bismo da se podudara sa izvozom po sektorima između zemalja CEFTA-e, mada ni to nije slučaj. U ovom slučaju veliki udio uvoza je u polju mineralnih goriva, maziva i srodnih materijala, kao i hemikalija i srodnih proizvoda.
+
+## Trgovina uslugama
+
+Trgovina uslugama (engl. Trade in Services) bilježi vrijednost usluga koje razmjenjuju rezidenti i nerezidenti jedne ekonomije, uključujući usluge koje se pružaju preko stranih podružnica osnovanih u inostranstvu. Ovaj se indikator mjeri u milionima i bilionima eura i postotku BDP-a za izvoz, uvoz i neto trgovinu. 
+
+```{r, echo = FALSE}
+its_tidy <- its %>% gather(Type, EUR, c(Import, Export, Balance))
+fig <- plot_ly(its)
+fig <- fig %>% add_trace(x = ~Year, y = ~Balance, type = 'bar', name = 'Balance',
+            marker = list(color = '#ddffd9'),
+            hoverinfo = "text",
+            text = ~paste(
+              '</br> Year:', Year,
+              '</br> Balance:', round(Balance/10^9, digits = 2), 'B'))
+fig <- fig %>% add_trace(x = ~Year, y = ~Import, type = 'scatter', mode = 'lines', name = 'Import',
+            line = list(color = '#ecc8ae'),
+            hoverinfo = "text",
+            text = ~paste(
+              '</br> Year:', Year,
+              '</br> Import:', round(Import/10^9, digits = 2), 'B'))
+fig <- fig %>% add_trace(x = ~Year, y = ~Export, type = 'scatter', mode = 'lines', name = 'Export',
+            line = list(color = '#d7907b'),
+            hoverinfo = "text",
+            text = ~paste(
+              '</br> Year:', Year,
+              '</br> Export:', round(Export/10^9, digits = 2), 'B'))
+fig <- fig %>% layout(title = 'Trade in Services',
+         xaxis = list(title = "Year"),
+         yaxis = list(title = 'EUR'))
+fig <- fig %>% layout(autosize = F)
+
+fig
+```
+
+Kada posmatramo izvoz usluga, vidimo da iz godine u godinu raste što zadovoljava jedan od strateških ciljeva, prema tome strategija ima pozitivne ishode i napredak je vidno ostvaren.
+
+SA - Proizvodne usluge nad fizičkim ulazima koji su u vlasništvu drugih, \
+SB - Usluge održavanja i popravki n.i.e., \
+SC - Prijevoz, \
+SD - Putovanje, \
+SE - Građevinske usluge, \
+SF - Osiguravajuće i mirovinske usluge, \
+SG - Financijske usluge, \
+SH - Naknade za upotrebu intelektualnog vlasništva n.i.e, \
+SI - Telekomunikacijske, računarske i informacijske usluge, \
+SJ - Ostale poslovne usluge, \
+SK - Osobne, kulturne i rekreacijske usluge, \
+SL - Vladine usluge, n.i.e, \
+SN - Nije dodijeljeno \
+
+### Uvoz usluga po sektorima i trgovinskim partnerima - BiH 2018
+
+```{r, echo = FALSE}
+imp_bih_tidy <- subset(imp_bih, select = -c(Total) )
+data.table::melt(imp_bih_tidy, id.vars='Partner') %>%
+plot_ly(x = ~value, y = ~Partner, type = 'bar', orientation = 'h',
+                name = ~sub("-.*", "", variable), color = ~variable,
+                hoverinfo = "text",
+                text = ~paste(
+                '</br> EUR:', value/10^6, 'M',
+                '</br> Sector:', sub(".*-", "", variable))  
+                ) %>%
+      layout(autosize = F, title = 'Import of Services by Trading Partners and by Sector', yaxis = list(title = 'Countries'), xaxis = list(title = 'EUR'), barmode = 'stack')
+```
+
+Posmatrajući uvoz usluga u BiH, može se uočiti da je većina uvoza usluga iz zemljama CEFTA-e, što je u skladu sa strategijom čiji je cilj učvršćivanje kako ekonomskih tako i političkih veza između ovih zemalja i stvaranje jedne kohezivne cjeline u kojoj je primarni fokus na rastu i razvoju. Pored toga dobar dio uvoza je iz Bosni i Hercegovini srodnih zemalja kao što su Hrvatska, Slovenija, Austrija i Turska, kao što je poznato BiH je sa svim ovim zemljama u prošlosti dijelila teritorij ili bila dio njega.
+
+### Izvoz usluga po sektorima i trgovinskim partnerima - BiH 2018
+
+```{r, echo = FALSE}
+exp_bih_tidy <- subset(exp_bih, select = -c(Total) )
+data.table::melt(exp_bih_tidy, id.vars='Partner') %>%
+plot_ly(x = ~value, y = ~Partner, type = 'bar', orientation = 'h',
+                name = ~sub("-.*", "", variable), color = ~variable,
+                hoverinfo = "text",
+                text = ~paste(
+                '</br> EUR:', value/10^6, 'M',
+                '</br> Sector:', sub(".*-", "", variable))  
+                ) %>%
+      layout(autosize = F, title = 'Export of Services by Trading Partners and by Sector', yaxis = list(title = 'Countries'), xaxis = list(title = 'EUR'), barmode = 'stack')
+```
+
+Ukoliko obratimo pažnju na izvoz usluga, vidimo da je najveći udio izvoza ka Njemačkoj, i to u polju proizvodnih i transportnih usluga, što je direktna posljedica današnjeg trenda odlaska mladih u zemlje EU u potrazi za boljim životnim standardnima. Isto vrjedi i za Italiju, Hrvatsku i neke ostale članice EU. Interesantno je uočiti da je izvoz u SAD, pored putničkih usluga dobrim dijelom u polju telekomunikacijskih, računarskih i informacijskih usluga. Svjesni smo razvoja IT usluga u našoj zemlji i velikog broja kompanija koje svoje usluge pružaju outsourcing kompanijama drugdje.
+
+## Direktne strane investicije
+
+Direktne strane investicije (FDI, engl. Foreign Direct Investment) kategorija su međunarodnih ulaganja koja odražavaju cilj postizanja trajnog interesa investitora jedne ekonomije u preduzeću s prebivalištem u drugoj ekonomiji. Trajni interes podrazumijeva da dugoročni odnos postoji između investitora i preduzeća i da investitor ima značajan utjecaj na način na koji se njime upravlja. Takav interes formalno se smatra da postoji ako izravni investitor posjeduje 10% ili više glasačkog prava u upravnom odboru (za inkorporativno preduzeće) ili ekvivalent (za nekorporativno preduzeće).
+
+## Prilivi
+
+Prilivi (engl. Inflows) su transakcije koje povećavaju investicije koje strani investitori imaju u firmama u zemlji u kojoj se podnosi izvještaj, ali ne i transakcije koje smanjuju investicije. 
+
+```{r, echo = FALSE}
+fdi_new <- ddply(fdi, .(ReportingParty, Year), numcolwise(sum))
+fdi_new <- fdi_new[fdi_new$ReportingParty != 'Serbia', ] # jer nema podataka, ne mogu naci
+
+# fdi_inflows_rs_new <- fdi_inflows_rs %>% gather(ReportingParty, Inflow, c('Serbia'))
+# fdi_inflows_rs_new['Outflow'] <- 0
+# fdi_inflows_rs_new
+# 
+# fdi_outflows_rs_new <- fdi_outflows_rs %>% gather(ReportingParty, Outflow, c('Serbia'))
+# fdi_outflows_rs_new['Inflow'] <- 0
+# fdi_outflows_rs_new
+# 
+# fdi_rs <- rbind(fdi_inflows_rs_new, fdi_outflows_rs_new)
+# fdi_rs <- ddply(fdi_rs, .(Year, ReportingParty), numcolwise(sum))
+# fdi_rs
+# 
+# fdi_new <- rbind(fdi_new, fdi_rs)
+# fdi_new
+
+fig <- plot_ly(fdi_new, x = ~Year, y = ~Inflow/10^9, color = ~ReportingParty, mode = 'lines+markers', type = 'scatter', 
+        hoverinfo = 'text',
+        text = ~paste('</br> Year:', Year,
+                      '</br> Inflow:', round(Inflow/10^9, digits = 2), 'B',
+                      '</br> Reporting Party:', ReportingParty))
+fig <- fig %>% layout(title = "FDI Inflows",
+         xaxis = list(title = "Year"),
+         yaxis = list (title = "Inflow")) %>% 
+                 layout(yaxis = list(ticksuffix = "B"))
+fig <- fig %>% layout(autosize = F)
+fig
+```
+
+Sa grafikona se može uočiti da su FDI prilivi u većini zemalja CEFTA-e kroz posljednjih par godina u porastu. Posebno se izdvaja Albanija, koja se očigledno otvorila za strane investicije u posmatranom periodu. Tu je i Kosovo koje se 2017. suočava sa značajnim padom, za skoro 50% u odnosu na prethodnu godinu, mogući su razlog političke neprilike sa Srbijom.
+
+### Ukupni prilivi - 2018
+
+```{r, echo = FALSE}
+fdi_inflow <- fdi_new[fdi_new$Year == '2018', ]
+fig <- plot_ly(fdi_inflow, labels = ~ReportingParty, values = ~Inflow, type = 'pie')
+fig <- fig %>% layout(autosize = F, title = 'FDI Inflow Total',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+```
+
+## Odlivi
+
+Odlivi (engl. Outflows) su transakcije koje povećavaju investicije u zemlji u kojoj se podnosi izvještaj, a koje investitori imaju u firmama u drugim zemljama. Investicije se povećavaju kupovinom udjela ili reinvestiranjem dobiti, a smanjuju se putem prodaje udjela ili zaduživanjem kod investora u stranoj firmi.
+
+```{r, echo = FALSE}
+fig <- plot_ly(fdi_new, x = ~Year, y = ~Outflow/10^9, color = ~ReportingParty, mode = 'lines+markers', type = 'scatter', 
+        hoverinfo = 'text',
+        text = ~paste('</br> Year:', Year,
+                      '</br> Outflow:', round(Outflow/10^9, digits = 2), 'B',
+                      '</br> Reporting Party:', ReportingParty))
+fig <- fig %>% layout(title = "FDI Outflows",
+         xaxis = list(title = "Year"),
+         yaxis = list (title = "Outflow")) %>% 
+                 layout(yaxis = list(ticksuffix = "B"))
+fig <- fig %>% layout(autosize = F)
+fig
+```
+
+Za razliku od priliva, vidimo da su odlivi na znatno nižem nivou. U većini zemalja su konstantni ili bilježe blagi pad. Razvijenost zemalja Jugoistočne Europe je pontencijalni uzrok ovakvom ponašanju i niskim vrijednostima ulaganja u stranim državama. 
+
+### Ukupni odlivi - 2018
+
+```{r, echo = FALSE}
+fdi_outflow <- fdi_new[fdi_new$Year == '2018', ]
+fig <- plot_ly(fdi_outflow, labels = ~ReportingParty, values = ~Outflow, type = 'pie')
+fig <- fig %>% layout(autosize = F, title = 'FDI Outflow Total',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+```
+
+## Prilivi vs. odlivi za BiH
+
+```{r, echo = FALSE}
+fdi_tidy <- fdi_bih %>% gather(Type, EUR, c("Inflow", "Outflow"))
+
+fig <- plot_ly(fdi_tidy)
+fig <- fig %>% add_trace(x = ~Year, y = ~EUR/10^6, color = ~Type, mode = 'lines+markers', type = 'scatter', 
+        hoverinfo = 'text',
+        text = ~paste('</br> Year:', Year,
+                      '</br> EUR:', round(EUR/10^6, digits = 2), 'M',
+                      '</br> Type:', Type))
+fig <- fig %>% layout(title = "Inflow vs. Outflow",
+         xaxis = list(title = "Year"),
+         yaxis = list (title = "EUR")) %>% 
+                 layout(yaxis = list(ticksuffix = "M"))
+fig <- fig %>% layout(autosize = F)
+fig
+```
+
+Kao i većina zemalja CEFTA-e, pa tako i BiH bilježi rast u FDI prilivima kroz posljednjih par godina, ali i značajan pad u odlivima.
+
+## Statistika stranih podružnica
+
+Statistika stranih podružnica (FATS, engl Foreign Affiliates Statistics), opisuje aktivnosti stranih podružnica: preduzeća s prebivalištem u zemlji ili području, poput Europske unije (EU), koja su pod kontrolom ili u vlasništvu (multinacionalnih) preduzeća koja imaju prebivalište izvan te zemlje ili područja.
+Statistika o trgovini uslugama stranih podružnica (engl. Foreign Affiliates Trade in Services) mjeri komercijalnu prisutnost dobavljača usluga u inostranstvu putem podružnica na stranim tržištima, pa je usko povezana sa statistikama direktnih stranih ulaganja (FDI).
+
+### Unutrašnji FATS: preduzeća i zaposlenici
+
+Strana podružnica u okviru termina unutrašnji FATS (engl. Inward FATS) je preduzeće s prebivalištem u zemlji koja izvještava nad kojom kontrolu ima institucionalna jedinica kojoj prebivalište nije u toj istoj zemlji. 
+Zaposlenost predstavlja udio zaposlenosti u preduzećima pod nadzorom stranaca u ukupnoj zaposlenosti.
+
+```{r, echo = FALSE}
+ay <- list(
+  rangemode = 'tozero',
+  overlaying = "y",
+  side = "right",
+  title = "Enterprises",
+  showgrid = F
+)
+
+fig <- plot_ly(fats) %>% 
+  add_bars(x = ~Year, y = ~Employment, name = 'Employment', 
+           marker = list(color = 'f61067'), offsetgroup = 1) %>%
+  add_bars(x = ~Year, y = ~Enterprises, name = 'Enterprises', 
+           marker = list(color = '5e239d'), yaxis = "y2", offsetgroup = 2) %>%
+  layout(title = 'Inward FATS: Enterprises and Employees',
+         yaxis2 = ay,
+         xaxis = list(title = "Year"),
+         yaxis = list(title = "Employment"),
+         barmode = 'group',
+         legend = list(x = 1.1, y = 1),
+         autosize = F)
+
+fig 
+
+```
+
+Na grafikonu vidimo stabilan, organski rast kako u preduzećima tako i u zaposlenosti. Isto tako moguće je vidjeti i stabilan odnos između broja preduzeća i zaposlenosti kroz godine. 
+
+### Unutrašnji FATS: dodana vrijednost i promet
+
+Dodana vrijednost (engl. Value added) odražava doprinos rada i kapitala proizvodnji. Promet (engl. Turnover) pokriva bruto poslovni prihod umanjen za rabate, popuste i prinose.
+
+```{r, echo = FALSE}
+fats_vt$Year <- as.factor(fats_vt$Year)
+fats_vt %>%
+  group_by(Year) %>%
+  summarise(c = mean(Turnover), h = mean(Value)) %>%
+  mutate(Year = forcats::fct_reorder(Year, c)) %>%
+  plot_ly() %>%
+  add_segments(
+    y = ~c, x = ~Year,
+    yend = ~h, xend = ~Year, 
+    color = I("gray"), showlegend = FALSE
+  ) %>%
+  add_markers(
+    y = ~c, x = ~Year, 
+    color = I("blue"), 
+    name = "Turnover"
+  ) %>%
+  add_markers(
+    y = ~h, x = ~Year, 
+    color = I("#e75480"),
+    name  = "Value Added"
+  ) %>%
+  layout(autosize = F, title = 'Inward FATS: Value added and Turnover', xaxis = list(title = "Year"), yaxis = list(title = "EUR"))
+```
+
+Između prometa i dodane vrijednosti je prisutan trend rasta, i stabilan odnos kroz godine.
